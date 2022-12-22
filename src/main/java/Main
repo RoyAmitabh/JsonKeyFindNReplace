@@ -1,0 +1,146 @@
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.Reader;
+import java.lang.reflect.Type;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.Map;
+import java.util.Set;
+
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonIOException;
+import com.google.gson.JsonObject;
+import com.google.gson.reflect.TypeToken;
+
+/*
+ * 
+ * Input to this program can be in the following way : 
+ * 
+ * If you have to process only a single JSON object , then run with input similar to : <absoulte path of input file> <absolute path of output file>
+ * 
+ * ex: input file contains something like [{}]
+ * 
+ *  
+ * If you have to process array of JSON objects  , then run with input similar to : <absoulte path of input file> <absolute path of output file>
+ * 
+ *  ex: input file contains something like [{},{}]
+ * 
+ * It can search all keys with the character mentioned in constant  charToSearch. Then it will replace it with character mentioned in constant charToReplace 
+ * 
+ * 
+ * */
+public class Main {
+
+	private static final String charToSearch = "\\.";
+	private static final String charToReplace = "~";
+	public static void main(String[] args) {				
+			HandleMultipleObjects(args[0],args[1]);
+	}
+
+/*
+ * This method invokes file reader and updater for JSON objects , finally perform file write.
+ * 
+ * */
+	private static void HandleMultipleObjects(String inputPath,String outputPath) {		
+		JsonArray updatedObjectArr = updateArrayofJsonKeysWithChar(readInputArr(inputPath));
+		Gson gsonData = new GsonBuilder().disableHtmlEscaping().setPrettyPrinting().create();
+		FileWriter fileHandle = null;
+		try {
+			fileHandle = new FileWriter(outputPath);
+			gsonData.toJson(updatedObjectArr, fileHandle);
+		} catch (JsonIOException e) {
+			e.printStackTrace();
+		} catch (IOException e) {
+			e.printStackTrace();
+		} finally {
+			try {
+				if (fileHandle != null) {
+					fileHandle.close();
+				}
+			} catch (IOException ioe) {
+				ioe.printStackTrace();
+			}
+		}
+	}
+
+
+/*
+ * 
+ * This method invokes the update Json object method for each object in input array.
+ * */
+	private static JsonArray updateArrayofJsonKeysWithChar(ArrayList<Map<?, ?>> readInputArr) {
+		JsonArray arrObject = new JsonArray();
+		Iterator<Map<?,?>> itrArr = readInputArr.iterator();
+		while(itrArr.hasNext()) {
+			arrObject.add(updateJsonKeysWithChar(itrArr.next()));			
+		}
+		return arrObject;
+	}
+
+
+/*
+ * This method reads input file and returns list of objects (Map) in an Array List.
+ * */
+	private static ArrayList<Map<?,?>> readInputArr(String inputPath) {		
+		ArrayList<Map<?,?>> userArray = null;
+		Reader reader = null;
+		try {
+			Gson gson = new Gson();
+			reader = Files.newBufferedReader(Paths.get(inputPath));
+			Type userListType = new TypeToken<ArrayList<Map<?,?>>>(){}.getType();			 
+			userArray = gson.fromJson(reader, userListType); 	
+			Iterator<Map<?,?>> itrArr = userArray.iterator();
+			while(itrArr.hasNext()){
+				Map<?,?> listEntry= itrArr.next();
+				System.out.println("<====>");
+				for (Map.Entry<?, ?> entry : listEntry.entrySet()) {
+					 System.out.println(entry.getKey() + "=" + entry.getValue());
+				}
+			}
+			
+		} catch (Exception ex) {
+			ex.printStackTrace();
+		} finally {
+			try {
+				if (reader != null) {
+					reader.close();
+				}
+			} catch (IOException ioe) {
+				ioe.printStackTrace();
+			}
+		}
+
+		return userArray;
+	}
+
+
+
+/*
+ * This method iterates a given map of key,values and perform find and replace of characters in the key.
+ * Returns the updated JsonObject.
+ * 
+ * */
+	private static JsonObject updateJsonKeysWithChar(Map inputData) {
+		JsonObject refactorJsonData = new JsonObject();
+		Set<?> jsonKeys = inputData.keySet();
+		Iterator<?> keys = jsonKeys.iterator();
+		while (keys.hasNext()) {
+			String currentKey = keys.next().toString();
+			System.out.println("Key found = " + currentKey);			
+			String updatedKey = currentKey.replaceAll(charToSearch, charToReplace);
+			System.out.println("Key updated to = " + updatedKey);
+			if (inputData.get(currentKey) instanceof Map) {
+				JsonObject currentValue = updateJsonKeysWithChar((Map) inputData.get(currentKey));
+				refactorJsonData.add(updatedKey, currentValue);
+			} else {
+				String currentValue = inputData.get(currentKey).toString();
+				refactorJsonData.addProperty(updatedKey, currentValue);
+			}
+		}
+		return refactorJsonData;
+	}
+}
