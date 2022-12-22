@@ -1,0 +1,11 @@
+[{
+	"clusterParams": {
+		"cluster_configs": {
+			"spark~driver~extraJavaOptions": "'-Dlog4j2.formatMsgNoLookups=true'",
+			"spark~ui~retainedTasks": "100000",
+			"spark~ui~retainedStages": "1000",
+			"spark~ui~retainedJobs": "1000",
+			"spark~databricks~delta~preview~enabled": "true"
+		}
+	}
+}]
